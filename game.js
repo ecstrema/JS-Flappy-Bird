@@ -1,15 +1,35 @@
+import { BbBluetooth } from "./bluetooth.js";
+
 const RAD = Math.PI / 180;
 const scrn = document.getElementById('canvas');
 const sctx = scrn.getContext("2d");
 scrn.tabIndex = 1;
+
+let connected = false;
+let hasTriedToConnect = false;
+let userWeight = "nan";
 scrn.addEventListener("click", () => {
     switch (state.curr) {
         case state.getReady:
-            state.curr = state.Play;
-            SFX.start.play();
+            if (!hasTriedToConnect) {
+                hasTriedToConnect = true;
+                BbBluetooth.connect().then(() => {
+                    connected = true;
+                    while (!parseFloat(userWeight)) {
+                        userWeight = prompt("Please enter your weight in kg");
+                    }
+                }).catch((err) => {
+                    console.log("Error connecting to bluetooth device: " + err);
+                    alert("Could not connect to bluetooth device, emulating real game instead.");
+                }).finally(() => {
+                    SFX.start.play();
+                    state.curr = state.Play;
+                });
+            }
             break;
         case state.Play:
-            bird.flap();
+            if (!connected)
+                bird.flap();
             break;
         case state.gameOver:
             state.curr = state.getReady;
@@ -31,7 +51,8 @@ scrn.onkeydown = function keyDown(e) {
                 SFX.start.play();
                 break;
             case state.Play:
-                bird.flap();
+                if (!connected)
+                    bird.flap();
                 break;
             case state.gameOver:
                 state.curr = state.getReady;
@@ -83,8 +104,8 @@ const bg = {
     x: 0,
     y: 0,
     draw: function () {
-        y = parseFloat(scrn.height - this.sprite.height);
-        sctx.drawImage(this.sprite, this.x, y);
+        this.y = parseFloat(scrn.height - this.sprite.height);
+        sctx.drawImage(this.sprite, this.x, this.y);
     }
 };
 const pipe = {
@@ -125,7 +146,7 @@ const bird = {
             { sprite: new Image() },
             { sprite: new Image() },
         ],
-    rotatation: 0,
+    rotation: 0,
     x: 50,
     y: 100,
     speed: 0,
@@ -137,7 +158,7 @@ const bird = {
         let w = this.animations[this.frame].sprite.width;
         sctx.save();
         sctx.translate(this.x, this.y);
-        sctx.rotate(this.rotatation * RAD);
+        sctx.rotate(this.rotation * RAD);
         sctx.drawImage(this.animations[this.frame].sprite, -w / 2, -h / 2);
         sctx.restore();
     },
@@ -145,15 +166,22 @@ const bird = {
         let r = parseFloat(this.animations[0].sprite.width) / 2;
         switch (state.curr) {
             case state.getReady:
-                this.rotatation = 0;
+                this.rotation = 0;
                 this.y += (frames % 10 == 0) ? Math.sin(frames * RAD) : 0;
                 this.frame += (frames % 10 == 0) ? 1 : 0;
                 break;
             case state.Play:
                 this.frame += (frames % 5 == 0) ? 1 : 0;
-                this.y += this.speed;
-                this.setRotation()
-                this.speed += this.gravity;
+                if (!connected) {
+                    this.y += this.speed;
+                    this.setRotation()
+                    this.speed += this.gravity;
+                }
+                else {
+                    if (BbBluetooth.data != -1) {
+                        this.y = BbBluetooth.data / userWeight * scrn.height;
+                    }
+                }
                 if (this.y + r >= gnd.y || this.collisioned()) {
                     state.curr = state.gameOver;
                 }
@@ -169,7 +197,7 @@ const bird = {
                 else {
                     this.speed = 0;
                     this.y = gnd.y - r;
-                    this.rotatation = 90;
+                    this.rotation = 90;
                     if (!SFX.played) {
                         SFX.die.play();
                         SFX.played = true;
@@ -188,11 +216,10 @@ const bird = {
     },
     setRotation: function () {
         if (this.speed <= 0) {
-
-            this.rotatation = Math.max(-25, -25 * this.speed / (-1 * this.thrust));
+            this.rotation = Math.max(-25, -25 * this.speed / (-1 * this.thrust));
         }
         else if (this.speed > 0) {
-            this.rotatation = Math.min(90, 90 * this.speed / (this.thrust * 2));
+            this.rotation = Math.min(90, 90 * this.speed / (this.thrust * 2));
         }
     },
     collisioned: function () {
