@@ -9,13 +9,15 @@ scrn.addEventListener("click", () => {
     switch (state.curr) {
         case state.getReady:
             if (!BbBluetooth.hasTriedToConnect) {
-                BbBluetooth.connect().catch((err) => {
+                BbBluetooth.connect().then(async () => {
+                    await BbBluetooth.getUserWeight();
+                }).catch((err) => {
                     console.log("Error connecting to bluetooth device: " + err);
                     alert("Could not connect to bluetooth device, emulating real game instead.");
                     // Uncomment this line to emulate the game with mouse position instead of bluetooth data
                     // BbBluetooth.setupForMousePosData();
-                }).finally(async () => {
-                    await BbBluetooth.getUserWeight();
+                    // await BbBluetooth.getUserWeight();
+                }).finally(() => {
                     SFX.start.play();
                     state.curr = state.Play;
                 });
