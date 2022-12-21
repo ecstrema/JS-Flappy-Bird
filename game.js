@@ -5,30 +5,24 @@ const scrn = document.getElementById('canvas');
 const sctx = scrn.getContext("2d");
 scrn.tabIndex = 1;
 
-let connected = false;
-let hasTriedToConnect = false;
-let userWeight = "nan";
 scrn.addEventListener("click", () => {
     switch (state.curr) {
         case state.getReady:
-            if (!hasTriedToConnect) {
-                hasTriedToConnect = true;
-                BbBluetooth.connect().then(() => {
-                    connected = true;
-                    while (!parseFloat(userWeight)) {
-                        userWeight = prompt("Please enter your weight in kg");
-                    }
-                }).catch((err) => {
+            if (!BbBluetooth.hasTriedToConnect) {
+                BbBluetooth.connect().catch((err) => {
                     console.log("Error connecting to bluetooth device: " + err);
                     alert("Could not connect to bluetooth device, emulating real game instead.");
-                }).finally(() => {
+                    // Uncomment this line to emulate the game with mouse position instead of bluetooth data
+                    // BbBluetooth.setupForMousePosData();
+                }).finally(async () => {
+                    await BbBluetooth.getUserWeight();
                     SFX.start.play();
                     state.curr = state.Play;
                 });
             }
             break;
         case state.Play:
-            if (!connected)
+            if (!BbBluetooth.isConnected)
                 bird.flap();
             break;
         case state.gameOver:
@@ -51,7 +45,7 @@ scrn.onkeydown = function keyDown(e) {
                 SFX.start.play();
                 break;
             case state.Play:
-                if (!connected)
+                if (!BbBluetooth.isConnected)
                     bird.flap();
                 break;
             case state.gameOver:
@@ -172,14 +166,14 @@ const bird = {
                 break;
             case state.Play:
                 this.frame += (frames % 5 == 0) ? 1 : 0;
-                if (!connected) {
+                if (!BbBluetooth.isConnected) {
                     this.y += this.speed;
                     this.setRotation()
                     this.speed += this.gravity;
                 }
                 else {
                     if (BbBluetooth.data != -1) {
-                        this.y = BbBluetooth.data / userWeight * scrn.height;
+                        this.y = BbBluetooth.data / BbBluetooth.userWeight * scrn.height;
                     }
                 }
                 if (this.y + r >= gnd.y || this.collisioned()) {
