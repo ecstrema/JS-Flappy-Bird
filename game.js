@@ -189,7 +189,7 @@ const bird = {
                         const newy = BbBluetooth.data / BbBluetooth.userWeight * scrn.height;
                         // this.speed = (newy - this.y) * 20;
                         // this.setRotation();
-                        this.y = Math.max(Math.min(newy, scrn.height - r), r);
+                        this.y = Math.max(Math.min(newy, gnd.y - r), r);
                     }
                 }
                 if ((!BbBluetooth.isConnected && this.y + r >= gnd.y) || this.collisioned())
