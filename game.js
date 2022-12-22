@@ -15,7 +15,7 @@ scrn.addEventListener("click", () => {
                     console.log("Error connecting to bluetooth device: " + err);
                     alert("Could not connect to bluetooth device, emulating real game instead.");
                     // Uncomment this line to emulate the game with mouse position instead of bluetooth data
-                    const emulateWithMouse = true;
+                    const emulateWithMouse = false;
                     if (emulateWithMouse) {
                         await BbBluetooth.getUserWeight();
                         BbBluetooth.setupForMousePosData();
